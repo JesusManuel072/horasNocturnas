@@ -1,51 +1,65 @@
 <?php
+// Inicializamos variables
 $horasTotales = 0;
 $horasNocturnas = 0;
 $horasNormales = 0;
 $error = "";
 
-// Recogemos los valores seleccionados en los desplegables (o usamos 22:00 y 06:00 por defecto)
-$horaInicioNocturnidad = $_POST['inicio_nocturnidad'] ?? "22:00";
-$horaFinNocturnidad = $_POST['fin_nocturnidad'] ?? "06:00";
+// Horarios de nocturnidad por defecto seguros
+$horaInicioNocturnidad = "22:00";
+$horaFinNocturnidad = "06:00";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    
+    $inputInicioNoc = $_POST['inicio_nocturnidad'] ?? "22:00";
+    $inputFinNoc = $_POST['fin_nocturnidad'] ?? "06:00";
+
+    if (preg_match('/^([01][0-9]|2[0-3]):([0-5][0-9])$/', $inputInicioNoc) && preg_match('/^([01][0-9]|2[0-3]):([0-5][0-9])$/', $inputFinNoc)) {
+        $horaInicioNocturnidad = $inputInicioNoc;
+        $horaFinNocturnidad = $inputFinNoc;
+    }
+
     $entradaStr = $_POST['entrada'] ?? '';
     $salidaStr = $_POST['salida'] ?? '';
 
     if (!empty($entradaStr) && !empty($salidaStr)) {
-        // Convertimos las fechas/horas introducidas a timestamps (segundos Epoch)
         $timestampEntrada = strtotime($entradaStr);
         $timestampSalida = strtotime($salidaStr);
 
-        if ($timestampSalida <= $timestampEntrada) {
+        if ($timestampEntrada === false || $timestampSalida === false) {
+            $error = "El formato de fecha y hora introducido no es válido.";
+        } elseif ($timestampSalida <= $timestampEntrada) {
             $error = "La fecha y hora de salida debe ser posterior a la de entrada.";
         } else {
             // 1. Duración total del turno en segundos
             $segundosTotales = $timestampSalida - $timestampEntrada;
-            $horasTotales = round($segundosTotales / 3600, 2);
 
-            // 2. Cálculo de la nocturnidad corrigiendo el solape de madrugada
+            // Convertimos a horas exactas sin redondear
+            $horasTotales = $segundosTotales / 3600;
+
+            // 2. Cálculo de la nocturnidad blindado 100% contra solapes fantasma
             $segundosNocturnosTotales = 0;
             
             list($hNocInicio, $mNocInicio) = explode(':', $horaInicioNocturnidad);
             list($hNocFin, $mNocFin) = explode(':', $horaFinNocturnidad);
 
-            // CORRECCIÓN: Empezamos un día antes ($timestampEntrada - 86400 segundos) 
-            // para evaluar correctamente turnos que empiezan de madrugada (ej. a las 00:00) 
-            // y que pillan la recta final de la nocturnidad que arrancó la noche anterior.
-            $diaActual = strtotime(date('Y-m-d', $timestampEntrada)) - 86400;
+            // Determinamos el día de inicio y fin del bucle
+            $diaActual = strtotime(date('Y-m-d', $timestampEntrada));
             $diaFin = strtotime(date('Y-m-d', $timestampSalida));
 
+            $horaEntradaStr = date('H:i', $timestampEntrada);
+
+            // Si entramos de madrugada (ej: 00:00), venimos de la noche anterior.
+            if ($horaEntradaStr <= $horaFinNocturnidad) {
+                $diaActual = strtotime("-1 day", $diaActual);
+            }
+
             while ($diaActual <= $diaFin) {
-                // Inicio de la nocturnidad en el día evaluado
                 $nocturnidadInicioHoy = strtotime(date('Y-m-d', $diaActual) . " " . $horaInicioNocturnidad);
                 
-                // Si el fin de nocturnidad es menor que el inicio (ej: 06:00 < 22:00), 
-                // significa que termina al día siguiente.
                 $offsetDiasFin = ($hNocFin < $hNocInicio || ($hNocFin == $hNocInicio && $mNocFin < $mNocInicio)) ? "+1 day" : "today";
                 $nocturnidadFinHoy = strtotime(date('Y-m-d', $nocturnidadInicioHoy) . " " . $horaFinNocturnidad . " " . $offsetDiasFin);
 
-                // Aplicamos la fórmula matemática de solape (max/min)
                 $solapeInicio = max($timestampEntrada, $nocturnidadInicioHoy);
                 $solapeFin = min($timestampSalida, $nocturnidadFinHoy);
 
@@ -56,11 +70,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $diaActual = strtotime("+1 day", $diaActual);
             }
 
-            $horasNocturnas = round($segundosNocturnosTotales / 3600, 2);
-            $horasNormales = round($horasTotales - $horasNocturnas, 2);
+            // Corrección matemática pura de frontera
+            if ($segundosNocturnosTotales > $segundosTotales) {
+                $segundosNocturnosTotales = $segundosTotales;
+            }
+
+            // Horas nocturnas exactas
+            $horasNocturnas = $segundosNocturnosTotales / 3600;
+
+            // Horas normales exactas
+            $horasNormales = $horasTotales - $horasNocturnas;
         }
     } else {
         $error = "Por favor, introduce la fecha y hora completas del fichaje.";
+    }
+}
+
+// Función para mostrar minutos si el turno es menor de 1 hora
+function mostrarTiempo($horas) {
+    if ($horas < 1) {
+        $min = round($horas * 60); // minutos exactos
+        return $min . " minutos";
+    } else {
+        return round($horas, 2) . " horas";
     }
 }
 ?>
@@ -68,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Calculadora de Turnos y Nocturnidad Dinámica</title>
+    <title>Calculadora de Turnos y Nocturnidad Segura</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f4f9; margin: 40px; color: #333; }
         .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 520px; margin: auto; }
@@ -92,11 +124,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h2>Control de Fichaje y Nocturnidad</h2>
 
     <?php if (!empty($error)): ?>
-        <p class="error"><?php echo $error; ?></p>
+        <p class="error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
     <?php endif; ?>
 
     <form method="POST">
-        <!-- Bloque para configurar la nocturnidad de forma visual -->
         <fieldset>
             <legend>Definir Horas de Nocturnidad</legend>
             <div class="inline-group">
@@ -128,15 +159,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </fieldset>
 
-        <!-- Bloque del fichaje del empleado -->
         <div class="form-group">
             <label for="entrada">Entrada (Fecha y Hora):</label>
-            <input type="datetime-local" id="entrada" name="entrada" required value="<?php echo $_POST['entrada'] ?? ''; ?>">
+            <input type="datetime-local" id="entrada" name="entrada" required value="<?php echo isset($_POST['entrada']) ? htmlspecialchars($_POST['entrada'], ENT_QUOTES, 'UTF-8') : ''; ?>">
         </div>
 
         <div class="form-group">
             <label for="salida">Salida (Fecha y Hora):</label>
-            <input type="datetime-local" id="salida" name="salida" required value="<?php echo $_POST['salida'] ?? ''; ?>">
+            <input type="datetime-local" id="salida" name="salida" required value="<?php echo isset($_POST['salida']) ? htmlspecialchars($_POST['salida'], ENT_QUOTES, 'UTF-8') : ''; ?>">
         </div>
 
         <button type="submit">Calcular Turno</button>
@@ -145,9 +175,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($error)): ?>
         <div class="results">
             <h3>Resultados:</h3>
-            <p><strong>Total Trabajadas:</strong> <?php echo $horasTotales; ?> horas</p>
-            <p><strong>Horas Normales:</strong> <?php echo $horasNormales; ?> horas</p>
-            <p style="color: #d9534f;"><strong>Horas Nocturnas:</strong> <?php echo $horasNocturnas; ?> horas</p>
+            <p><strong>Total Trabajadas:</strong> <?php echo mostrarTiempo($horasTotales); ?></p>
+            <p><strong>Horas Normales:</strong> <?php echo mostrarTiempo($horasNormales); ?></p>
+            <p style="color: #d9534f;"><strong>Horas Nocturnas:</strong> <?php echo mostrarTiempo($horasNocturnas); ?></p>
         </div>
     <?php endif; ?>
 </div>

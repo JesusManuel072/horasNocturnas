@@ -88,13 +88,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Función para mostrar minutos si el turno es menor de 1 hora
 function mostrarTiempo($horas) {
+
+    // Si es menos de 1 hora → mostrar minutos exactos
     if ($horas < 1) {
-        $min = round($horas * 60); // minutos exactos
+        $min = round($horas * 60);
         return $min . " minutos";
-    } else {
-        return round($horas, 2) . " horas";
     }
+
+    // Si es 1 hora o más → mostrar HH:MM exacto
+    $totalMin = round($horas * 60); // minutos totales exactos
+    $h = floor($totalMin / 60);
+    $m = $totalMin % 60;
+
+    return sprintf("%02d:%02d horas", $h, $m);
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="es">

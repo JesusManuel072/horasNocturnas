@@ -1,33 +1,178 @@
-# Calculadora de Turnos y Nocturnidad (Backend Matemático)
 
-Una solución web ligera en **PHP 8.4** para el cálculo automatizado de turnos de trabajo y solapes de horas nocturnas mediante un modelo geométrico-matemático continuo (basado en rangos de segundos/minutos), eliminando por completo el uso de estructuras condicionales (`if`) anidadas.
+🕒 Sistema de Cálculo de Turnos con Nocturnidad
 
-Diseñado para soportar turnos complejos, medianochas y jornadas prolongadas de más de 24 horas (como guardias médicas o turnos especiales).
+Proyecto en PHP para calcular turnos laborales con precisión, incluyendo:
 
-## 🚀 Características
-- **Cero condicionales de tiempo:** Utiliza funciones matemáticas de rango (`max` / `min`) sobre una línea de tiempo continua.
-- **Soporta turnos largos (>24h):** Capaz de calcular fichajes que cruzan varios días naturales y múltiples madrugadas.
-- **Horquillas de nocturnidad dinámicas:** Permite configurar de manera visual e independiente la hora de inicio y fin de la nocturnidad mediante desplegables.
-- **Todo en uno:** Script autónomo listo para pruebas locales en entornos como WAMPP, XAMPP o servidores de producción PHP 8.4+.
+duración total del turno
 
-## 🛠️ Requisitos
-- Servidor web con **PHP 8.4** o superior.
+horas nocturnas
 
-## 📦 Instalación y Uso
-1. Clona o descarga este repositorio en tu directorio web local (por ejemplo, `htdocs` en WAMPP).
-2. Asegúrate de que el archivo principal sea `index.php`.
-3. Abre tu navegador y accede a `http://localhost/tu-proyecto/`.
-4. Selecciona las horas de inicio y fin de la nocturnidad, introduce la fecha y hora de entrada y salida del empleado, y haz clic en **Calcular Turno**.
+horas normales
 
-## 📄 Licencia
+solapamientos entre días
 
-Este proyecto es de código abierto y se distribuye bajo los términos de la **GNU General Public License v3.0 (GPLv3)**.
+cruces de medianoche
 
-Esto significa que eres libre de:
-- **Usarlo comercialmente:** Las empresas e instituciones pueden utilizar este software libremente para sus operaciones.
-- **Modificarlo:** Puedes adaptar el código a tus necesidades.
-- **Distribuirlo:** Puedes compartir copias del programa.
+turnos largos (24h, 48h, etc.)
 
-**Condición copyleft:** Si modificas este software o creas una obra derivada y decides **redistribuirla** (ofrecerla públicamente o a terceros), estás obligado a liberar el código fuente modificado bajo esta misma licencia GPLv3, garantizando que el conocimiento siga siendo siempre de y para la comunidad.
+validación de fechas y horas
 
-Consulta el archivo [LICENSE](LICENSE) para ver los detalles legales completos.
+presentación en minutos o HH:MM
+
+El objetivo es ofrecer un sistema fiable, claro y fácil de integrar en aplicaciones reales.
+
+📁 Estructura del proyecto
+
+/
+├── index.php
+├── lib_turnos.php
+├── tests.php
+├── post_test.php
+└── README.md
+
+📄 index.php
+
+Interfaz web del proyecto.
+
+Recoge los datos del formulario (entrada, salida, inicio_nocturnidad, fin_nocturnidad).
+
+Llama a la función principal:
+
+$result = calcularTurno($entrada, $salida, $inicioNoc, $finNoc);
+
+Muestra los resultados en pantalla.
+
+Incluye un ejemplo comentado para guardar los datos en base de datos mediante PDO.
+
+Importante:index.php no contiene la lógica de cálculo.Toda la matemática está en lib_turnos.php.
+
+📄 lib_turnos.php
+
+Motor del sistema.
+
+Contiene la función:
+
+calcularTurno($entradaStr, $salidaStr, $horaInicioNocturnidad, $horaFinNocturnidad)
+
+Esta función calcula:
+
+segundos totales
+
+horas totales
+
+segundos nocturnos
+
+horas nocturnas
+
+segundos normales
+
+horas normales
+
+Incluye:
+
+validación de formato
+
+validación de orden (salida > entrada)
+
+cálculo de solapamientos nocturnos sin errores
+
+soporte para turnos de varios días
+
+corrección matemática de fronteras
+
+Es la lógica que usan index.php, tests.php y post_test.php.
+
+📄 tests.php
+
+Pruebas automáticas por CLI.
+
+Permite validar la lógica con casos reales y casos límite:
+
+turnos de minutos
+
+turnos de horas
+
+turnos nocturnos
+
+turnos que cruzan medianoche
+
+turnos de varios días
+
+errores de formato
+
+errores de orden
+
+Se ejecuta con:
+
+php tests.php
+
+📄 post_test.php
+
+Pruebas automáticas vía web (WAMP).
+
+Muestra los resultados en una tabla HTML.
+
+Usa la misma lógica de lib_turnos.php.
+
+Permite probar el sistema desde el navegador sin usar CLI.
+
+Acceso:
+
+http://localhost/post_test.php
+
+🧮 mostrarTiempo()
+
+Función auxiliar que convierte horas decimales en:
+
+minutos exactos (si < 1h)
+
+formato HH:MM (si ≥ 1h)
+
+Usada por index.php para mostrar resultados de forma clara.
+
+🚀 Cómo usar el sistema
+
+Inicia WAMP.
+
+Coloca los archivos en www/.
+
+Abre:
+
+http://localhost/index.php
+
+Introduce entrada, salida y horarios de nocturnidad.
+
+Obtén resultados exactos.
+
+🧪 Cómo ejecutar las pruebas
+
+CLI:
+
+php tests.php
+
+Web:
+
+http://localhost/post_test.php
+
+📌 Notas importantes
+
+Toda la lógica está centralizada en lib_turnos.php.
+
+index.php solo muestra resultados.
+
+No hay duplicación de cálculos.
+
+El sistema está preparado para ampliarse (BD, API, etc.).
+
+Nocturnidad funciona incluso en turnos de varios días.
+
+✍️ Créditos
+
+Proyecto desarrollado por:
+
+Jesús — diseño, lógica, pruebas y arquitectura
+
+Copilot — asistencia técnica, refactorización y estructura
+
+Gemini — inició el proyecto y luchó valientemente contra los minutos
+

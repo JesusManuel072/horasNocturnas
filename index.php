@@ -1,4 +1,58 @@
 <?php
+
+//codigo nuevo sacamos la logica del calculo de horas
+
+require 'lib_turnos.php'; // <-- incluir la librería con calcularTurno()
+// require 'funciones_presentacion.php'; // si tienes mostrarTiempo()
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $entradaStr = $_POST['entrada'] ?? '';
+    $salidaStr  = $_POST['salida']  ?? '';
+    $horaInicioNocturnidad = $_POST['inicio_nocturnidad'] ?? '22:00';
+    $horaFinNocturnidad    = $_POST['fin_nocturnidad'] ?? '06:00';
+
+    $result = calcularTurno($entradaStr, $salidaStr, $horaInicioNocturnidad, $horaFinNocturnidad);
+
+    if (isset($result['error'])) {
+        if ($result['error'] === 'formato') {
+            $error = "El formato de fecha/hora no es válido.";
+        } else {
+            $error = "La fecha/hora de salida debe ser posterior a la de entrada.";
+        }
+    } else {
+        $segundosTotales   = $result['segundosTotales'];
+        $horasTotales      = $result['horasTotales'];
+        $segundosNocturnos = $result['segundosNocturnos'];
+        $horasNocturnas    = $result['horasNocturnas'];
+        $segundosNormales  = $result['segundosNormales'];
+        $horasNormales     = $result['horasNormales'];
+
+        $displayTotal   = mostrarTiempo($horasTotales);
+        $displayNocturn = mostrarTiempo($horasNocturnas);
+        $displayNormal  = mostrarTiempo($horasNormales);
+
+        // Ejemplo de inserción segura en BD (PDO) - ajusta nombres de tabla y campos
+        /*
+        $stmt = $pdo->prepare(
+            "INSERT INTO fichajes (entrada, salida, seg_totales, seg_nocturnos, seg_normales)
+             VALUES (:entrada, :salida, :seg_totales, :seg_nocturnos, :seg_normales)"
+        );
+        $stmt->execute([
+            ':entrada' => $entradaStr,
+            ':salida' => $salidaStr,
+            ':seg_totales' => $segundosTotales,
+            ':seg_nocturnos' => $segundosNocturnos,
+            ':seg_normales' => $segundosNormales
+        ]);
+        */
+    }
+}
+// fin del codigo nuevo
+
+//  codigo antiguo
+/*
+
 // Inicializamos variables
 $horasTotales = 0;
 $horasNocturnas = 0;
@@ -84,7 +138,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $error = "Por favor, introduce la fecha y hora completas del fichaje.";
     }
-}
+}   
+
+*/
+    // fin de codigo antiguo
 
 // Función para mostrar minutos si el turno es menor de 1 hora
 function mostrarTiempo($horas) {
